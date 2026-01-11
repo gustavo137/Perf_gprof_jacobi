@@ -67,10 +67,11 @@ done
 deactivate
 # Copy results back to submit dir (so you can download/inspect easily)
 cp -a "$OUTDIR" "$SLURM_SUBMIT_DIR/gprof_${SLURM_JOB_ID}"
-
 # Optional cleanup of scratch dir:
 rm -rf "$OUTDIR"
-
+cd "$SLURM_SUBMIT_DIR/gprof_${SLURM_JOB_ID}"
+rm gmon.rank*
+rm gprof.*.txt
 #  ===============================================================
 cd "$SLURM_SUBMIT_DIR"
 # mv out  to out_"${DIR_NAME}"
