@@ -28,17 +28,21 @@ We run the program with:
 srun -n 1 ./build/bin/jacobi.x 1000 > out/jacobi_1N.dat
 ```
 Then we can generate the gprof basic report with:
-```gprof ./build/bin/jacobi.x gmon.out > out/gprof_report.txt
+```
+gprof ./build/bin/jacobi.x gmon.out > out/gprof_report.txt
 ```
 ### Generate the call graph with Graphviz(dot) / gprof2dot
 We need to install graphviz and gprof2dot if not already installed:
-```pip install gprof2dot
+```
+pip install gprof2dot
 ```
 Then we can generate the call graph with:
-```gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpdf -o callgraph.pdf
+```
+gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpdf -o callgraph.pdf
 ```
 or for PNG format:
-```gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpng -o callgraph.png
+```
+gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpng -o callgraph.png
 ```
 
 ### Running with N processes MPI
@@ -47,10 +51,12 @@ or for PNG format:
 
 ### Install graphviz/gprof2dot on cluster
 After doing `modmap -m dot graphviz` we check that in leonardo is already installed:
-```which dot
+```
+which dot
 ```
 To install gprof2dot we can use a virtual environment:
-```module load python/3.11.7
+```
+module load python/3.11.7
 python -m venv ~/myenv
 source ~/myenv/bin/activate
 pip install --upgrade pip
@@ -67,7 +73,8 @@ deactivate
 ```
 Then we can use gprof2dot as shown above.
 f you want to remove the env do: 
-```rm -rf ~/myenv
+```
+rm -rf ~/myenv
 ```
 ## Using perf 
 
