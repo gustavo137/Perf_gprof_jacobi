@@ -46,8 +46,26 @@ gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpng -o callgr
 ```
 
 ### Running with N processes MPI
+The problem is that every rank will generate its own gmon.out file, so the solution is to use a wrapper script to rename the gmon.out file per rank `GMON_OUT_PREFIX` caller `launch_gprof_per_rank.sh`:
+```
+#!/bin/bash
+set -euo pipefail
 
+: "${SLURM_PROCID:?Run under srun}"
 
+EXE="${EXE:-./build/bin/jacobi.x}"
+
+OUTDIR="${GPROF_OUTDIR:-$SCRATCH/jacobi/gprof_${SLURM_JOB_ID}}"
+mkdir -p "$OUTDIR"
+umask 007
+
+# gprof will create files like: ${GMON_OUT_PREFIX}.<pid>
+export GMON_OUT_PREFIX="${OUTDIR}/gmon.rank${SLURM_PROCID}"
+
+exec "$EXE" "$@"
+```
+give it execute permission `chmod +x launch_gprof_per_rank.sh` and then we can use it in the `job.slurm` as follows:
+```
 
 ### Install graphviz/gprof2dot on cluster
 After doing `modmap -m dot graphviz` we check that in leonardo is already installed:

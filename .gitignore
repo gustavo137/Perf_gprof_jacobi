@@ -3,5 +3,6 @@
 .x
 build/
 build*/
-
+gprof_*/
+out_*/
 
