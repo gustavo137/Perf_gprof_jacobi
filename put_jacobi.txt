@@ -1,0 +1,99 @@
+#ifdef PUT_JACOBI
+//MPI_PUT_JACOBI
+template <typename T>
+void Solver<T>::mpi_put_jacobi(Mesh<T>& mesh, const int& max_steps, const int& print_interval){
+  // Setting the current values
+  int steps = max_steps;
+  int size = mesh.size;
+  int rows = mesh.rows;
+
+  std::ostringstream job_name;
+  job_name<<"MPI-PUT IJacobi computation with "<<mesh.num_process<<" processes from rank "<<mesh.rank;
+
+  std::ostringstream comm_name;
+  comm_name<<"MPI-PUT IJacobi sync with "<<mesh.num_process<<" processes from rank       "<<mesh.rank;
+
+  std::ostringstream total_name;
+  total_name<<"MPI-PUT IJacobi total  with "<<mesh.num_process<<" processes from rank    "<<mesh.rank;
+  
+  MPI_Win win_1_row[2];
+  MPI_Win win_l_row[2];
+
+  int win_size = sizeof(T)*(size+2);
+
+  MPI_Win_create(mesh.new_field.data(), win_size, sizeof(T), MPI_INFO_NULL, mesh.comm, &win_1_row[1]);
+  MPI_Win_create(mesh.field.data(), win_size, sizeof(T), MPI_INFO_NULL, mesh.comm, &win_1_row[0]);
+
+  MPI_Win_create(&mesh.new_field[(size+2)*(rows+1)], win_size, sizeof(T), MPI_INFO_NULL, mesh.comm, &win_l_row[1]);
+  MPI_Win_create(&mesh.field[(size+2)*(rows+1)], win_size, sizeof(T), MPI_INFO_NULL, mesh.comm, &win_l_row[0]);
+  // Run solver
+  {
+  CSimple_timer<units> t{total_name.str(), table};
+  while(steps+1){
+    {CSimple_timer<units> t{comm_name.str(), table};
+      MPI_Win_fence(0, win_l_row[(max_steps-steps)%2]);
+      MPI_Put(&mesh.field[(size+2)], win_size, MPI_BYTE, (!mesh.rank ? MPI_PROC_NULL : mesh.rank - 1), 0, win_size, MPI_BYTE, win_l_row[(max_steps-steps)%2]);
+    
+      MPI_Win_fence(0, win_1_row[(max_steps-steps)%2]);
+      MPI_Put(&mesh.field[(size+2)*rows], size+2, MPI_DOUBLE, (mesh.rank == mesh.num_process-1 ? MPI_PROC_NULL : mesh.rank + 1), 0, size+2, MPI_DOUBLE, win_1_row[(max_steps-steps)%2]);
+    }
+
+    // Updating the new_field based in the old field.
+    {CSimple_timer<units> t{job_name.str(), table};
+      for(int j = 2; j<rows ; j++){
+        for(int i = 1; i<size+1; i++){
+          mesh.new_field[(size+2)*(j) + (i)] = 0.25*(mesh.field[(size+2)*(j) + (i+1)] 
+                                              + mesh.field[(size+2)*(j)+(i-1)] 
+                                              + mesh.field[(size+2)*(j+1)+(i)] 
+                                              + mesh.field[(size+2)*(j-1) + (i)]); 
+        }
+      }
+    }
+ 
+      MPI_Win_fence(0, win_l_row[(max_steps-steps)%2]);
+      MPI_Win_fence(0, win_1_row[(max_steps-steps)%2]);
+    // Updating the borders
+    {CSimple_timer<units> t{job_name.str(), table};
+      for(int i = 1; i<size+1; i++){
+        mesh.new_field[(size+2) + (i)] = 0.25*(mesh.field[(size+2)*(1) + (i+1)] 
+                                          + mesh.field[(size+2)*(1)+(i-1)] 
+                                          + mesh.field[(size+2)*(1+1)+(i)]
+                                          + mesh.field[(size+2)*(1-1) + (i)]); 
+
+        mesh.new_field[(size+2)*rows + (i)] = 0.25*(mesh.field[(size+2)*(rows) + (i+1)] 
+                                                + mesh.field[(size+2)*(rows)+(i-1)] 
+                                                + mesh.field[(size+2)*(rows+1)+(i)] 
+                                                + mesh.field[(size+2)*(rows-1) + (i)]); 
+      }
+    }//Timing computing 
+    
+    // If print is defined with the compilers flag.
+    #ifdef PRINT
+    // Printing into a file
+    if((steps)%print_interval == 0){
+      std::ostringstream file_name;
+      file_name<<"data/";
+      file_name<<"mpi_put"<<steps<<".dat";
+
+      std::ofstream file_var;
+      file_var.open(file_name.str());
+      mesh.mpi_print(file_var);
+      file_var.close();
+    }
+
+    #endif
+ 
+    // update field 
+    mesh.field.swap(mesh.new_field); 
+    // update steps
+    steps--;
+  }
+  }//Timing total time
+  
+
+  MPI_Win_free(&win_1_row[0]); 
+  MPI_Win_free(&win_1_row[1]); 
+  MPI_Win_free(&win_l_row[0]); 
+  MPI_Win_free(&win_l_row[1]); 
+}  
+#endif// PUT_JACOBI
