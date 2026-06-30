@@ -44,6 +44,24 @@ or for PNG format:
 ```
 gprof -b ./build/bin/jacobi.x gmon.out | gprof2dot -f prof | dot -Tpng -o callgraph.png
 ```
+or svg format:
+```
+gprof -b exe.x gmon.out \
+  | gprof2dot -f prof \
+  | dot -Tsvg -o callgraph.svg
+```
+you also can reduce noise: modify 2.0 | 1.0 according to your needs, higher value if big graph, lower value if small graph:
+```
+gprof -b exe.x gmon.out \
+  | gprof2dot -f prof --node-thres=2.0 --edge-thres=1.0 \
+  | dot -Tsvg -o callgraph_pruned.svg
+```
+change the color scheme:
+```
+gprof -b exe.x gmon.out \
+  | gprof2dot -f prof --colour-nodes-by-selftime \
+  | dot -Tsvg -o callgraph_selftime.svg
+```
 
 ### Running gprof with N processes MPI
 The problem is that every rank will generate its own gmon.out file, so the solution is to use a wrapper script to rename the gmon.out file per rank `GMON_OUT_PREFIX` caller `launch_gprof_per_rank.sh`:
